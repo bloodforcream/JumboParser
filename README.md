@@ -1,0 +1,5 @@
+### Запуск:
+
+```
+python JumboSpider.py
+```

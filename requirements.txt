@@ -1,0 +1,6 @@
+aiohttp==3.6.2
+asyncio==3.4.3
+bs4==0.0.1
+scrapy==2.3.0
+scrapy-proxies==0.4
+scrapy-rotating-proxies==0.6.2
