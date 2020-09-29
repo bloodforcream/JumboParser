@@ -42,9 +42,7 @@ GRAPHQL_QUERY = """query product { product(sku: "%s")
         image 
         inAssortment 
         isAvailable 
-        link 
-        status 
-        retailSet 
+        link  
         brand 
         category 
         thumbnails {image type}
@@ -152,7 +150,9 @@ class JumboSpider(scrapy.Spider):
             },
             'assets': {
                 'main_image': query_response['data']['product'].get('image'),
-                'set_images': [image.get('image') for image in query_response['data']['product'].get('thumbnails')]
+                'set_images': [image.get('image') for image in query_response['data']['product'].get('thumbnails')],
+                'view360': [],
+                'video': []
             },
             'metadata': {
                 '__description': response.meta['description'],
