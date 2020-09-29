@@ -113,7 +113,7 @@ class JumboSpider(scrapy.Spider):
 
         yield scrapy.Request(
             url=jumbo_api_url,
-            callback=self.run_query,
+            callback=self.parse_product_internal_info,
             method='POST',
             body=body,
             headers=response.meta['headers'],
@@ -121,38 +121,45 @@ class JumboSpider(scrapy.Spider):
             dont_filter=True
         )
 
-    def run_query(self, response):
+    def parse_product_internal_info(self, response):
         query_response = json.loads(response.text)
 
-        subtitle = query_response['data']['product'].get('subtitle') or ''
-        title = query_response['data']['product'].get('title')
-        marketing_tags = [[j.get('text') for j in i.get('tags')] for i in
-                          query_response['data']['product']['promotions']]
-        original_price = float(query_response['data']['product'].get('prices').get('price'))
-        current_price = float(query_response['data']['product'].get('prices').get('promoPrice') or original_price)
+        data = query_response['data']['product']
+
+        title = data['title']
+        subtitle = data['subtitle'].replace(' ', '') or ''
+        if subtitle:
+            title = title.replace(subtitle, '').strip() + f", {subtitle}"
+
+        marketing_tags = [[tag.get('text') for tag in prom.get('tags')]
+                          for prom in data['promotions']]
+
+        original_price = float(data['prices']['price'])
+        current_price = float(data['prices']['promoPrice'] or original_price)
+        sale_tag = str(current_price / original_price * 100) if current_price != original_price else "0"
 
         result = {
             'timestamp': datetime.strftime(datetime.now(), '%m/%d/%Y %H:%M:%S'),
-            'RPC': query_response['data']['product'].get('id'),
-            'url': 'https://www.jumbo.com' + query_response['data']['product'].get('link'),
-            'title': title.replace(subtitle.replace(' ', ''), '').strip() + f""", {subtitle}""" if subtitle else title,
+            'RPC': data['id'],
+            'url': 'https://www.jumbo.com' + data['link'],
+            'title': title,
             'marketing_tags': marketing_tags[0] if marketing_tags else marketing_tags,
-            'brand': query_response['data']['product'].get('brand'),
+            'brand': data.get('brand'),
             'section': response.meta['category'],
             'price_data': {
                 'current': current_price,
                 'original': original_price,
-                'sale_tag': f'Скидка {str(current_price / original_price * 100) if current_price != original_price else "0"}%'
+                'sale_tag': f'Скидка {sale_tag}%'
             },
             'stock': {
-                'in_stock': query_response['data']['product'].get('inAssortment'),
-                'count': 0
+                'in_stock': data.get('inAssortment'),
+                'count': 0  # нет информации о количестве товара
             },
             'assets': {
-                'main_image': query_response['data']['product'].get('image'),
-                'set_images': [image.get('image') for image in query_response['data']['product'].get('thumbnails')],
-                'view360': [],
-                'video': []
+                'main_image': data.get('image'),
+                'set_images': [image.get('image') for image in data.get('thumbnails')],
+                'view360': [],  # нет view360 ни на одном из товаров
+                'video': []  # нет видео ни на одном из товаров
             },
             'metadata': {
                 '__description': response.meta['description'],
